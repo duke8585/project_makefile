@@ -2,7 +2,7 @@
 # and https://github.com/idealo/die-monte-carlo-dq/blob/main/Makefile
 
 PYTHON = python3
-PYTHON_VERSION = 3.9.13
+PYENV_VERSION = 3.9.13
 VENV = .venv
 
 

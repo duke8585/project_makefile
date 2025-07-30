@@ -1,3 +1,8 @@
+# ⚠️⚠️⚠️ this repo is archived / discontinued ⚠️⚠️⚠️
+
+work continued [here](https://github.com/duke8585/modern-python-repo)
+
+
 # a python project makefile
 
 for setting un neat specific venvs in your repo projects.

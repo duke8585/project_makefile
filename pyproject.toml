@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "my-fancy-app"
+version = "0.1.0"
+description = "A Python project with modern uv-based tooling"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pylint", 
+    "pytest",
+    "autoflake",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.pylint.messages_control]
+disable = ["C0103", "C0114"]

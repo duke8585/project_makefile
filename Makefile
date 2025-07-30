@@ -1,93 +1,103 @@
-# inspired by https://github.com/idealo/shalmaneser-parquet-file-merge/blob/main/Makefile
+# Modern Python project Makefile using uv and pyenv
+# Inspired by https://github.com/idealo/shalmaneser-parquet-file-merge/blob/main/Makefile
 # and https://github.com/idealo/die-monte-carlo-dq/blob/main/Makefile
 
-PYTHON = python3
 PYTHON_VERSION = 3.11.3
-VENV = .venv
 APP_NAME = "my-fancy-app"
-
 
 .PHONY: all
 DEFAULT_GOAL: setup
-LOOKBACK_DAYS?=14
 
-setup: install_pyenv_version venv
+# Complete setup: install python version and sync dependencies
+setup: install_pyenv_version sync
 
-venv: $(VENV)/touchfile # wrapper for the one below
-
+# Install pyenv (if needed)
 get_pyenv:
-	@echo "installing pyenv via homebrew"
+	@echo "Installing pyenv via homebrew"
 	brew install pyenv
 
+# Install specific Python version via pyenv
 install_pyenv_version:
-	@echo "installing python$(PYTHON_VERSION) via pyenv"
+	@echo "Installing python $(PYTHON_VERSION) via pyenv"
 	pyenv install $(PYTHON_VERSION) || true
 	pyenv local $(PYTHON_VERSION)
-	@# NOTE avoid error 1 on N exit
 
-# pip-install: # NOTE only for GH actions
-# 	pip install -r requirements.txt && pip install -r requirements-dev.txt
+# Install uv (if not already installed)
+get_uv:
+	@echo "Installing uv"
+	curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# only when requirements change: https://stackoverflow.com/questions/24736146/how-to-use-virtualenv-in-makefile
-$(VENV)/touchfile: requirements.txt requirements-dev.txt
-	@if [ -f .python-version ]; then \
-		echo "Creating virtual environment and installing dependencies"; \
-		$(PYTHON) -m venv $(VENV) || { echo "!!!no $(PYTHON) found"; exit 1; }; \
-		. $(VENV)/bin/activate && pip install --upgrade pip && \
-		pip install -r requirements.txt && pip install -r requirements-dev.txt; \
-		touch $(VENV)/touchfile; \
-		rm -rf .python-version; \
-	else \
-		echo "!!!no .python-version found, see 'make install_pyenv_version'"; exit 1; \
-	fi
+# Sync dependencies (creates venv automatically if needed)
+sync:
+	@echo "Syncing dependencies with uv"
+	uv sync --extra dev
 
-update: # to force the upper
-	. $(VENV)/bin/activate && pip install --upgrade pip \
-	&& pip install -r requirements.txt && pip install -r requirements-dev.txt
+# Update dependencies
+update:
+	@echo "Updating dependencies"
+	uv sync --extra dev --upgrade
 
+# Add a new dependency
+add:
+	@echo "Usage: make add PACKAGE=package_name"
+	@echo "Example: make add PACKAGE=requests"
+ifdef PACKAGE
+	uv add $(PACKAGE)
+endif
+
+# Add a dev dependency  
+add-dev:
+	@echo "Usage: make add-dev PACKAGE=package_name"
+	@echo "Example: make add-dev PACKAGE=pytest-cov"
+ifdef PACKAGE
+	uv add --dev $(PACKAGE)
+endif
+
+# Remove a dependency
+remove:
+	@echo "Usage: make remove PACKAGE=package_name"
+	@echo "Example: make remove PACKAGE=requests"
+ifdef PACKAGE
+	uv remove $(PACKAGE)
+endif
+
+# Run tests
+test:
+	uv run pytest
+
+# Format code
+format:
+	uv run black .
+	uv run autoflake --in-place --remove-all-unused-imports --recursive .
+
+# Lint code
+lint:
+	uv run pylint **/*.py
+
+# Run a Python script
+run:
+	@echo "Usage: make run SCRIPT=script_name.py"
+	@echo "Example: make run SCRIPT=main.py"
+ifdef SCRIPT
+	uv run python $(SCRIPT)
+endif
+
+# Clean up
 cleanup:
-	@echo "Cleaning up the envs / temps."
-	@rm -rf $(VENV)/
-	# TODO more to be deleted?
+	@echo "Cleaning up the virtual environment"
+	@rm -rf .venv/
+	@rm -rf .pytest_cache/
+	@rm -rf __pycache__/
+	@find . -name "*.pyc" -delete
+	@find . -name "*.pyo" -delete
 
+# Show project info
+info:
+	@echo "Project: $(APP_NAME)"
+	@echo "Python version: $(PYTHON_VERSION)"
+	@echo "Dependencies:"
+	@uv tree 2>/dev/null || echo "Run 'make sync' first"
 
-
-# # NOTE docker part, only as needed
-
-# d_init:
-# 	brew install --cask docker && \
-# 	docker run hello-world && \
-# 	echo "we are set :)"
-
-# d_start:
-# 	open -a docker
-# 	echo "we are set :)"
-
-# d_build:
-# 	docker build . -t $(APP_NAME)
-
-# d_run: d_build
-# 	docker run -d -p 5000:5000 $(APP_NAME)
-
-# d_list:
-# 	docker ps
-
-# d_kill:
-# 	docker kill $$(docker ps | grep $(APP_NAME) | cut -d" " -f 1)
-
-# d_ssh:
-# 	docker exec -it $$(docker ps | grep $(APP_NAME) | cut -d" " -f 1) bash
-
-# d_ssh_root:
-# 	docker exec -it -u root $$(docker ps | grep $(APP_NAME) | cut -d" " -f 1) bash
-
-# d_clean_all: d_clean_images d_clean_containers d_clean_volumes
-
-# d_clean_images:
-# 	docker image prune -a
-
-# d_clean_containers:
-# 	docker container prune
-
-# d_clean_volumes:
-# 	docker system prune --volumes
+# Lock dependencies (create uv.lock)
+lock:
+	uv lock
